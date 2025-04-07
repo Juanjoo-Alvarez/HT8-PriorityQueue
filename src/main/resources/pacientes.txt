@@ -1,0 +1,10 @@
+Juan Perez, fractura de pierna, C
+Maria Ramirez, apendicitis, A
+Lorenzo Toledo, chikunguya, E
+Carmen Sarmientos, dolores de parto, B
+Roberto Garcia, dolor de pecho, A
+Sofia Mendez, fiebre alta, C
+Miguel Hernandez, envenenamiento, B
+Luisa Jimenez, quemaduras de segundo grado, B
+Carlos Ruiz, dificultad respiratoria, A
+Ana Martinez, dolor abdominal intenso, C
