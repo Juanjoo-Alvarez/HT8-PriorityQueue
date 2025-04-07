@@ -1,0 +1,146 @@
+{
+    "patient_data": [
+        {
+            "patient_id": 1,
+            "severity": 1,
+            "entry_time": 21.37911479659895,
+            "exit_time": 101.62635874359334,
+            "total_time": 80.24724394699439
+        },
+        {
+            "patient_id": 2,
+            "severity": 5,
+            "entry_time": 21.30282557659431,
+            "exit_time": 194.4477324513846,
+            "total_time": 173.1449068747903
+        },
+        {
+            "patient_id": 3,
+            "severity": 5,
+            "entry_time": 9.477654417348313,
+            "exit_time": 105.34517951404375,
+            "total_time": 95.86752509669543
+        },
+        {
+            "patient_id": 4,
+            "severity": 1,
+            "entry_time": 10.352520262846847,
+            "exit_time": 64.74331912577618,
+            "total_time": 54.39079886292934
+        },
+        {
+            "patient_id": 5,
+            "severity": 2,
+            "entry_time": 13.94505321904402,
+            "exit_time": 124.60253651780621,
+            "total_time": 110.6574832987622
+        },
+        {
+            "patient_id": 6,
+            "severity": 3,
+            "entry_time": 13.031451855993339,
+            "exit_time": 140.77419839742151,
+            "total_time": 127.74274654142818
+        },
+        {
+            "patient_id": 7,
+            "severity": 5,
+            "entry_time": 0.024785515186056983,
+            "exit_time": 150.65225843771464,
+            "total_time": 150.62747292252857
+        },
+        {
+            "patient_id": 8,
+            "severity": 5,
+            "entry_time": 10.445516201864605,
+            "exit_time": 73.31497429614258,
+            "total_time": 62.869458094277974
+        },
+        {
+            "patient_id": 9,
+            "severity": 3,
+            "entry_time": 16.46478162742043,
+            "exit_time": 170.7236491888232,
+            "total_time": 154.25886756140278
+        },
+        {
+            "patient_id": 10,
+            "severity": 4,
+            "entry_time": 16.146625723948546,
+            "exit_time": 156.45584907339895,
+            "total_time": 140.3092233494504
+        },
+        {
+            "patient_id": 11,
+            "severity": 5,
+            "entry_time": 10.694517782377982,
+            "exit_time": 103.62388871267403,
+            "total_time": 92.92937093029605
+        },
+        {
+            "patient_id": 12,
+            "severity": 2,
+            "entry_time": 19.331177463784034,
+            "exit_time": 180.7771067881476,
+            "total_time": 161.44592932436356
+        },
+        {
+            "patient_id": 13,
+            "severity": 5,
+            "entry_time": 1.4620869956927764,
+            "exit_time": 106.24922620252833,
+            "total_time": 104.78713920683556
+        },
+        {
+            "patient_id": 14,
+            "severity": 4,
+            "entry_time": 13.662213986217555,
+            "exit_time": 101.29035607252703,
+            "total_time": 87.62814208630948
+        },
+        {
+            "patient_id": 15,
+            "severity": 5,
+            "entry_time": 13.279860333864367,
+            "exit_time": 94.31373684057827,
+            "total_time": 81.03387650671391
+        },
+        {
+            "patient_id": 16,
+            "severity": 4,
+            "entry_time": 12.007755866160494,
+            "exit_time": 129.80980186157876,
+            "total_time": 117.80204599541827
+        },
+        {
+            "patient_id": 17,
+            "severity": 4,
+            "entry_time": 17.58528148593055,
+            "exit_time": 161.81533599714527,
+            "total_time": 144.23005451121472
+        },
+        {
+            "patient_id": 18,
+            "severity": 4,
+            "entry_time": 8.003738906829026,
+            "exit_time": 186.79195942073773,
+            "total_time": 178.7882205139087
+        },
+        {
+            "patient_id": 19,
+            "severity": 1,
+            "entry_time": 12.859414283172853,
+            "exit_time": 116.80684471687816,
+            "total_time": 103.9474304337053
+        },
+        {
+            "patient_id": 20,
+            "severity": 2,
+            "entry_time": 13.818912990566252,
+            "exit_time": 88.20517453361362,
+            "total_time": 74.38626154304737
+        }
+    ],
+    "average_time": 114.85470988005363,
+    "total_patients": 20
+}

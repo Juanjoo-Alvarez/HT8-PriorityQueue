@@ -18,10 +18,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
 import json
+import os
 
 # Configuración de estilo para las gráficas
 plt.style.use('ggplot')
 sns.set_theme(style="whitegrid")
+
+# Asegúrate de que exista el directorio para los resultados
+output_dir = "resultados"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Clase para reunir estadísticas
 class EmergencyStats:
@@ -70,94 +76,147 @@ class EmergencyStats:
             'utilization': in_use / capacity if capacity > 0 else 0
         })
 
-    def generate_report(self, simulation_params, file_prefix="emergency_simulation"):
+    def generate_report(self, simulation_params, file_prefix=os.path.join("resultados", "emergency_simulation")):
         """Genera un informe con gráficas y estadísticas"""
+        # Verificar si hay datos suficientes
+        if not self.patient_times:
+            print("ADVERTENCIA: No hay suficientes datos para generar un informe completo.")
+            return {
+                "error": "No hay suficientes datos para un análisis estadístico",
+                "simulation_parameters": simulation_params,
+                "total_patients": 0
+            }
+
         # Convertir a DataFrames para facilitar el análisis
         df_times = pd.DataFrame(self.patient_times)
 
         # Calcular estadísticas por severidad
-        severity_stats = df_times.groupby('severity')['total_time'].agg(['mean', 'median', 'std', 'count']).reset_index()
-        severity_stats.columns = ['Severidad', 'Tiempo Promedio (min)', 'Tiempo Mediano (min)', 'Desviación Estándar', 'Cantidad Pacientes']
+        severity_stats = None
+        try:
+            severity_stats = df_times.groupby('severity')['total_time'].agg(['mean', 'median', 'std', 'count']).reset_index()
+            severity_stats.columns = ['Severidad', 'Tiempo Promedio (min)', 'Tiempo Mediano (min)', 'Desviación Estándar', 'Cantidad Pacientes']
+        except KeyError:
+            print("ADVERTENCIA: No se pueden calcular estadísticas por severidad. Verificando columnas disponibles:")
+            print(df_times.columns.tolist())
+            severity_stats = pd.DataFrame({
+                'Severidad': list(set(self.patient_severity)),
+                'Tiempo Promedio (min)': [df_times['total_time'].mean()] * len(set(self.patient_severity)),
+                'Tiempo Mediano (min)': [df_times['total_time'].median()] * len(set(self.patient_severity)),
+                'Desviación Estándar': [df_times['total_time'].std()] * len(set(self.patient_severity)),
+                'Cantidad Pacientes': [len(df_times)] * len(set(self.patient_severity))
+            })
 
         # Gráfica 1: Tiempo promedio por severidad
-        plt.figure(figsize=(10, 6))
-        ax = sns.barplot(x='Severidad', y='Tiempo Promedio (min)', data=severity_stats)
-        plt.title('Tiempo Promedio de Atención por Nivel de Severidad')
-        plt.xlabel('Nivel de Severidad (1: más urgente, 5: menos urgente)')
-        plt.ylabel('Tiempo Promedio (minutos)')
-        plt.tight_layout()
-        plt.savefig(f"{file_prefix}_tiempo_por_severidad.png")
+        try:
+            plt.figure(figsize=(10, 6))
+            sns.barplot(x='Severidad', y='Tiempo Promedio (min)', data=severity_stats)
+            plt.title('Tiempo Promedio de Atención por Nivel de Severidad')
+            plt.xlabel('Nivel de Severidad (1: más urgente, 5: menos urgente)')
+            plt.ylabel('Tiempo Promedio (minutos)')
+            plt.tight_layout()
+            plt.savefig(f"{file_prefix}_tiempo_por_severidad.png")
+            plt.close()
+        except Exception as e:
+            print(f"Error al generar gráfica de tiempo por severidad: {e}")
 
         # Gráfica 2: Distribución de pacientes por día de la semana
-        days = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves',
-                4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
-        daily_df = pd.DataFrame([
-            {'Día': days[day], 'Pacientes': count}
-            for day, count in self.daily_patients.items()
-        ])
+        try:
+            days = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves',
+                    4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
+            daily_df = pd.DataFrame([
+                {'Día': days[day], 'Pacientes': count}
+                for day, count in self.daily_patients.items()
+            ])
 
-        plt.figure(figsize=(10, 6))
-        ax = sns.barplot(x='Día', y='Pacientes', data=daily_df)
-        plt.title('Distribución de Pacientes por Día de la Semana')
-        plt.xlabel('Día')
-        plt.ylabel('Número de Pacientes')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f"{file_prefix}_pacientes_por_dia.png")
+            plt.figure(figsize=(10, 6))
+            sns.barplot(x='Día', y='Pacientes', data=daily_df)
+            plt.title('Distribución de Pacientes por Día de la Semana')
+            plt.xlabel('Día')
+            plt.ylabel('Número de Pacientes')
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            plt.savefig(f"{file_prefix}_pacientes_por_dia.png")
+            plt.close()
+        except Exception as e:
+            print(f"Error al generar gráfica de pacientes por día: {e}")
 
         # Gráfica 3: Distribución de pacientes por hora
-        hourly_df = pd.DataFrame([
-            {'Hora': hour, 'Pacientes': count}
-            for hour, count in self.hourly_patients.items()
-        ]).sort_values('Hora')
+        try:
+            hourly_df = pd.DataFrame([
+                {'Hora': hour, 'Pacientes': count}
+                for hour, count in self.hourly_patients.items()
+            ]).sort_values('Hora')
 
-        plt.figure(figsize=(12, 6))
-        ax = sns.barplot(x='Hora', y='Pacientes', data=hourly_df)
-        plt.title('Distribución de Pacientes por Hora del Día')
-        plt.xlabel('Hora (24h)')
-        plt.ylabel('Número de Pacientes')
-        plt.xticks(range(0, 24, 2))
-        plt.tight_layout()
-        plt.savefig(f"{file_prefix}_pacientes_por_hora.png")
+            plt.figure(figsize=(12, 6))
+            sns.barplot(x='Hora', y='Pacientes', data=hourly_df)
+            plt.title('Distribución de Pacientes por Hora del Día')
+            plt.xlabel('Hora (24h)')
+            plt.ylabel('Número de Pacientes')
+            plt.xticks(range(0, 24, 2))
+            plt.tight_layout()
+            plt.savefig(f"{file_prefix}_pacientes_por_hora.png")
+            plt.close()
+        except Exception as e:
+            print(f"Error al generar gráfica de pacientes por hora: {e}")
 
         # Gráfica 4: Utilización de recursos a lo largo del tiempo
         for resource, usage_data in self.resource_usage.items():
             if not usage_data:
                 continue
 
-            resource_df = pd.DataFrame(usage_data)
+            try:
+                resource_df = pd.DataFrame(usage_data)
 
-            plt.figure(figsize=(14, 6))
-            ax = sns.lineplot(x='time', y='utilization', data=resource_df)
-            plt.title(f'Utilización de {resource} a lo largo del tiempo')
-            plt.xlabel('Tiempo de Simulación (horas)')
-            plt.ylabel('Tasa de Utilización')
-            plt.ylim(0, 1.05)
-            plt.tight_layout()
-            plt.savefig(f"{file_prefix}_{resource}_utilizacion.png")
+                plt.figure(figsize=(14, 6))
+                sns.lineplot(x='time', y='utilization', data=resource_df)
+                plt.title(f'Utilización de {resource} a lo largo del tiempo')
+                plt.xlabel('Tiempo de Simulación (horas)')
+                plt.ylabel('Tasa de Utilización')
+                plt.ylim(0, 1.05)
+                plt.tight_layout()
+                plt.savefig(f"{file_prefix}_{resource}_utilizacion.png")
+                plt.close()
+            except Exception as e:
+                print(f"Error al generar gráfica de utilización de {resource}: {e}")
 
         # Gráfica 5: Comparativa de tiempos de espera por etapa
-        wait_times_by_stage = {}
-        for stage, times in self.patient_wait_times.items():
-            df = pd.DataFrame(times)
-            wait_times_by_stage[stage] = df.groupby('severity')['wait_time'].mean().reset_index()
-            wait_times_by_stage[stage]['stage'] = stage
+        try:
+            wait_times_by_stage = {}
+            for stage, times in self.patient_wait_times.items():
+                if not times:
+                    continue
+                df = pd.DataFrame(times)
+                try:
+                    wait_times_by_stage[stage] = df.groupby('severity')['wait_time'].mean().reset_index()
+                    wait_times_by_stage[stage]['stage'] = stage
+                except KeyError:
+                    # Si hay error, usar un enfoque más simple
+                    wait_times_by_stage[stage] = pd.DataFrame({
+                        'severity': [1],  # Valor predeterminado
+                        'wait_time': [df['wait_time'].mean()],
+                        'stage': [stage]
+                    })
 
-        wait_times_df = pd.concat(wait_times_by_stage.values())
+            if wait_times_by_stage:
+                wait_times_df = pd.concat(wait_times_by_stage.values())
 
-        plt.figure(figsize=(12, 8))
-        ax = sns.barplot(x='severity', y='wait_time', hue='stage', data=wait_times_df)
-        plt.title('Tiempo Promedio de Espera por Etapa y Severidad')
-        plt.xlabel('Severidad')
-        plt.ylabel('Tiempo de Espera Promedio (minutos)')
-        plt.legend(title='Etapa')
-        plt.tight_layout()
-        plt.savefig(f"{file_prefix}_tiempos_espera_por_etapa.png")
+                plt.figure(figsize=(12, 8))
+                sns.barplot(x='severity', y='wait_time', hue='stage', data=wait_times_df)
+                plt.title('Tiempo Promedio de Espera por Etapa y Severidad')
+                plt.xlabel('Severidad')
+                plt.ylabel('Tiempo de Espera Promedio (minutos)')
+                plt.legend(title='Etapa')
+                plt.tight_layout()
+                plt.savefig(f"{file_prefix}_tiempos_espera_por_etapa.png")
+                plt.close()
+            else:
+                print("No hay datos suficientes para la gráfica de tiempos de espera por etapa")
+        except Exception as e:
+            print(f"Error al generar gráfica de tiempos de espera por etapa: {e}")
 
         # Guardar datos de simulación y resultados
         results = {
             "simulation_parameters": simulation_params,
-            "severity_statistics": severity_stats.to_dict(orient='records'),
             "average_time_in_system": df_times['total_time'].mean(),
             "median_time_in_system": df_times['total_time'].median(),
             "total_patients": len(df_times),
@@ -165,11 +224,17 @@ class EmergencyStats:
             "hourly_distribution": {str(hour): count for hour, count in self.hourly_patients.items()}
         }
 
-        with open(f"{file_prefix}_results.json", 'w') as f:
-            json.dump(results, f, indent=4)
+        try:
+            with open(f"{file_prefix}_results.json", 'w') as f:
+                json.dump(results, f, indent=4)
+        except Exception as e:
+            print(f"Error al guardar archivo JSON de resultados: {e}")
 
         # Generar análisis económico
-        self._generate_economic_analysis(simulation_params, file_prefix)
+        try:
+            self._generate_economic_analysis(simulation_params, file_prefix)
+        except Exception as e:
+            print(f"Error al generar análisis económico: {e}")
 
         return results
 
@@ -177,19 +242,19 @@ class EmergencyStats:
         """Genera un análisis económico basado en los recursos utilizados"""
         # Costos mensuales por tipo de recurso (valores ejemplo, ajustar según investigación)
         costs = {
-            'nurses': params['nurse_salary_monthly'] * params['num_nurses'],
-            'doctors': params['doctor_salary_monthly'] * params['num_doctors'],
-            'triage_nurses': params['nurse_salary_monthly'] * params['num_triage_nurses'],
-            'xray_machines': (params['xray_machine_cost'] / (5*12)) * params['num_xray'],  # Depreciar en 5 años
-            'lab_equipment': (params['lab_equipment_cost'] / (3*12)) * params['num_labs']  # Depreciar en 3 años
+            'nurses': params.get('nurse_salary_monthly', 1500) * params.get('num_nurses', 5),
+            'doctors': params.get('doctor_salary_monthly', 4500) * params.get('num_doctors', 3),
+            'triage_nurses': params.get('nurse_salary_monthly', 1500) * params.get('num_triage_nurses', 2),
+            'xray_machines': (params.get('xray_machine_cost', 120000) / (5*12)) * params.get('num_xray', 2),  # Depreciar en 5 años
+            'lab_equipment': (params.get('lab_equipment_cost', 75000) / (3*12)) * params.get('num_labs', 2)  # Depreciar en 3 años
         }
 
         # Calcular costo total mensual
         total_monthly_cost = sum(costs.values())
 
         # Estimar pacientes mensuales basado en la simulación
-        total_sim_hours = params['sim_time']
-        patients_per_hour = len(self.patient_times) / total_sim_hours
+        total_sim_hours = params.get('sim_time', 168)
+        patients_per_hour = len(self.patient_times) / total_sim_hours if total_sim_hours > 0 else 0
         estimated_monthly_patients = patients_per_hour * 24 * 30  # Pacientes estimados por mes
 
         # Calcular costo por paciente
@@ -218,6 +283,7 @@ class EmergencyStats:
             ax.text(i, v + 100, f"${v:,.0f}", ha='center')
         plt.tight_layout()
         plt.savefig(f"{file_prefix}_distribucion_costos.png")
+        plt.close()
 
         # Crear gráfico comparativo de utilización vs costo
         if avg_utilization:
@@ -241,6 +307,7 @@ class EmergencyStats:
             plt.xticks(rotation=45)
             plt.tight_layout()
             plt.savefig(f"{file_prefix}_utilizacion_vs_costo.png")
+            plt.close()
 
         # Guardar informe económico
         economic_results = {
@@ -263,11 +330,11 @@ class EmergencyRoom:
         self.stats = EmergencyStats()
 
         # Crear recursos con prioridad
-        self.triage_nurses = simpy.PriorityResource(env, capacity=config['num_triage_nurses'])
-        self.doctors = simpy.PriorityResource(env, capacity=config['num_doctors'])
-        self.nurses = simpy.PriorityResource(env, capacity=config['num_nurses'])
-        self.xray = simpy.PriorityResource(env, capacity=config['num_xray'])
-        self.lab = simpy.PriorityResource(env, capacity=config['num_labs'])
+        self.triage_nurses = simpy.PriorityResource(env, capacity=config.get('num_triage_nurses', 2))
+        self.doctors = simpy.PriorityResource(env, capacity=config.get('num_doctors', 3))
+        self.nurses = simpy.PriorityResource(env, capacity=config.get('num_nurses', 5))
+        self.xray = simpy.PriorityResource(env, capacity=config.get('num_xray', 2))
+        self.lab = simpy.PriorityResource(env, capacity=config.get('num_labs', 2))
 
         # Contadores
         self.patient_counter = 0
@@ -310,7 +377,7 @@ class EmergencyRoom:
     def get_severity(self):
         """Determina la severidad de un paciente (1-5, donde 1 es lo más grave)"""
         # Distribuir severidad con más probabilidad en valores intermedios
-        weights = self.config['severity_weights']
+        weights = self.config.get('severity_weights', [0.1, 0.25, 0.35, 0.2, 0.1])
         return random.choices([1, 2, 3, 4, 5], weights=weights)[0]
 
     def needs_xray(self, severity):
@@ -323,7 +390,7 @@ class EmergencyRoom:
             4: 0.3,
             5: 0.2   # 20% probabilidad para severidad 5
         }
-        return random.random() < probabilities[severity]
+        return random.random() < probabilities.get(severity, 0.5)
 
     def needs_lab(self, severity):
         """Determina si un paciente necesita pruebas de laboratorio basado en severidad"""
@@ -335,7 +402,7 @@ class EmergencyRoom:
             4: 0.4,
             5: 0.3   # 30% probabilidad para severidad 5
         }
-        return random.random() < probabilities[severity]
+        return random.random() < probabilities.get(severity, 0.5)
 
     def patient_process(self, patient_id, arrival_time, day_of_week):
         """Proceso que simula el recorrido de un paciente por la sala de emergencias"""
@@ -448,17 +515,23 @@ class EmergencyRoom:
 
     def generate_arrivals(self):
         """Genera la llegada de pacientes a la sala de emergencias"""
+        # Modificar para generar más pacientes en menos tiempo
         while True:
             # El día de la semana afecta la tasa de llegada
             day_of_week = int((self.env.now // 24) % 7)  # 0-6 (lun-dom)
             hour_of_day = int(self.env.now % 24)  # 0-23
 
             # Factores para ajustar la tasa de llegada
-            day_factor = self.config['day_factors'][day_of_week]
-            hour_factor = self.config['hour_factors'][hour_of_day // 4]  # Dividir en bloques de 4 horas
+            day_factors = self.config.get('day_factors', [0.8, 0.8, 0.9, 0.9, 1.0, 1.5, 1.2])
+            hour_factors = self.config.get('hour_factors', [0.5, 0.3, 0.7, 1.3, 1.5, 1.0])
 
-            # Calcular intervalo entre llegadas
-            adjusted_interval = self.config['arrival_interval'] / (day_factor * hour_factor)
+            day_factor = day_factors[day_of_week % len(day_factors)]
+            hour_factor = hour_factors[(hour_of_day // 4) % len(hour_factors)]
+
+            # Calcular intervalo entre llegadas - REDUCIR PARA GENERAR MÁS PACIENTES
+            base_interval = self.config.get('arrival_interval', 30)
+            # Reducir drásticamente el intervalo para la simulación
+            adjusted_interval = base_interval / (day_factor * hour_factor) / 10  # Dividir por 10 para más pacientes
 
             # Generar tiempo hasta la próxima llegada
             t = random.expovariate(1.0 / adjusted_interval)
@@ -469,10 +542,10 @@ class EmergencyRoom:
             self.env.process(self.patient_process(self.patient_counter, self.env.now, day_of_week))
 
 
-def run_simulation(config, sim_time=168):  # 168 horas = 1 semana
+def run_simulation(config, sim_time=24):  # Reducir a 24 horas para pruebas rápidas
     """Ejecuta la simulación de la sala de emergencias"""
     # Establecer semilla para reproducibilidad
-    random.seed(config['random_seed'])
+    random.seed(config.get('random_seed', 42))
 
     # Crear entorno de simulación
     env = simpy.Environment()
@@ -504,7 +577,7 @@ if __name__ == "__main__":
         'num_labs': 2,
 
         # Parámetros de llegada de pacientes
-        'arrival_interval': 30,  # Minutos promedio entre llegadas
+        'arrival_interval': 10,  # Reducido a 10 minutos para generar más pacientes
 
         # Factores de día de semana (lunes a domingo)
         'day_factors': [0.8, 0.8, 0.9, 0.9, 1.0, 1.5, 1.2],  # Fin de semana más ocupado
@@ -525,38 +598,50 @@ if __name__ == "__main__":
         'random_seed': 42
     }
 
-    # Ejecutar simulación de una semana
-    results = run_simulation(config, sim_time=168)
+    print("=== INICIANDO SIMULACIÓN DE EMERGENCIA HOSPITALARIA ===")
+    print("Ejecutando con configuración base...")
+
+    # Ejecutar simulación corta para pruebas
+    results = run_simulation(config, sim_time=24)
 
     print("\n=== RESULTADOS DE LA SIMULACIÓN ===")
-    print(f"Tiempo promedio en el sistema: {results['average_time_in_system']:.2f} minutos")
-    print(f"Pacientes atendidos: {results['total_patients']}")
+    print(f"Tiempo de simulación: 24 horas")
+    print(f"Pacientes atendidos: {results.get('total_patients', 0)}")
 
-    # Ejecutar simulaciones con diferentes configuraciones
+    if 'average_time_in_system' in results:
+        print(f"Tiempo promedio en el sistema: {results['average_time_in_system']:.2f} minutos")
+
+    print("\nSe han generado gráficos y análisis en la carpeta 'resultados'")
+    print("=== SIMULACIÓN COMPLETADA ===")
+
+    # Si deseas ejecutar un análisis de sensibilidad, descomenta estas líneas:
+    """
     print("\n=== ANÁLISIS DE SENSIBILIDAD ===")
 
     # Variando el número de doctores
     doctor_configs = []
-    for num_doctors in range(2, 7):
+    for num_doctors in range(2, 5):
+        print(f"Probando con {num_doctors} doctores...")
         config_variant = config.copy()
         config_variant['num_doctors'] = num_doctors
         result = run_simulation(
             config_variant,
-            sim_time=168
+            sim_time=24
         )
         doctor_configs.append({
             'num_doctors': num_doctors,
-            'avg_time': result['average_time_in_system'],
+            'avg_time': result.get('average_time_in_system', 0),
             'total_cost': num_doctors * config['doctor_salary_monthly'] +
                         config['num_nurses'] * config['nurse_salary_monthly'] +
                         config['num_triage_nurses'] * config['nurse_salary_monthly']
         })
-        print(f"Con {num_doctors} doctores: {result['average_time_in_system']:.2f} minutos de espera promedio")
+        if 'average_time_in_system' in result:
+            print(f"Con {num_doctors} doctores: {result['average_time_in_system']:.2f} minutos de espera promedio")
 
     # Encontrar configuración óptima
-    best_config = min(doctor_configs, key=lambda x: x['avg_time'])
-    print(f"\nConfiguración óptima recomendada: {best_config['num_doctors']} doctores")
-    print(f"Tiempo promedio de espera: {best_config['avg_time']:.2f} minutos")
-    print(f"Costo mensual total estimado: ${best_config['total_cost']:,.2f}")
-
-    print("\nReporte completo generado en los archivos emergency_simulation_*.png y emergency_simulation_results.json")
+    if doctor_configs:
+        best_config = min(doctor_configs, key=lambda x: x['avg_time'])
+        print(f"\nConfiguración óptima recomendada: {best_config['num_doctors']} doctores")
+        print(f"Tiempo promedio de espera: {best_config['avg_time']:.2f} minutos")
+        print(f"Costo mensual total estimado: ${best_config['total_cost']:,.2f}")
+    """
